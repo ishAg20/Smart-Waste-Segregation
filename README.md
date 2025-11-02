@@ -5,10 +5,14 @@ This project implements a **Smart Waste Segregation and Management System** usin
 ## Key Features
 
 - Uses the [TrashNet Dataset](https://github.com/garythung/trashnet) with mapped classes
-- Deep learning image classification using **MobileNetV2 + Transfer Learning**
+- **Two model options**:
+  - **Original**: MobileNetV2 + Transfer Learning
+  - **Proposed**: EfficientNetB0 + SE blocks + Advanced training techniques
 - Custom preprocessing and mapping to 3 broader waste categories
-- Model evaluation with **accuracy metrics** and **confusion matrix**
-- Streamlit-based **web interface** for instant image classification
+- **70-30 train-test split** with class balancing
+- **Advanced training**: Two-stage training, focal loss, label smoothing, data augmentation
+- Model evaluation with **accuracy metrics**, **confusion matrix**, and **Grad-CAM visualization**
+- Streamlit-based **web interface** with explainable AI features
 - Modular codebase for easy upgrades and experimentation
 
 ## Setup Instructions
@@ -113,4 +117,54 @@ streamlit run streamlit_app/app.py
 A browser window will open.
 
 Upload an image, and you'll instantly see the predicted category!
+
+---
+
+## 🚀 Using the Proposed Model (Recommended)
+
+For **better accuracy** and **explainable AI features**, use the proposed model:
+
+### Quick Start
+
+```bash
+# 1. Preprocess with 70-30 split and class balancing
+python data_preprocessing/preprocess.py
+
+# 2. Train proposed model (two-stage training)
+python model/train_proposed.py
+
+# 3. Evaluate with detailed metrics and Grad-CAM
+python model/evaluate_proposed.py
+
+# 4. Launch Streamlit app (supports both models)
+streamlit run streamlit_app/app.py
+```
+
+### What's Different?
+
+✅ **EfficientNetB0** base (better than MobileNetV2)
+✅ **SE (Squeeze-and-Excitation) blocks** for attention
+✅ **70-30 train-test split** (changed from 80-20)
+✅ **Class balancing** with oversampling
+✅ **Two-stage training** (frozen → fine-tuning)
+✅ **Focal loss** for handling imbalanced classes
+✅ **Label smoothing** for better generalization
+✅ **Data augmentation** (rotation, zoom, brightness, flip)
+✅ **Grad-CAM visualization** for explainability
+
+📖 **For detailed documentation, see [PROPOSED_MODEL_GUIDE.md](PROPOSED_MODEL_GUIDE.md)**
+
+---
+
+## 📊 Model Comparison
+
+| Feature | Original | Proposed |
+|---------|----------|----------|
+| Base Model | MobileNetV2 | EfficientNetB0 |
+| Training | Single-stage | Two-stage |
+| Data Split | 80-20 | 70-30 |
+| Augmentation | ❌ | ✅ |
+| Class Balancing | ❌ | ✅ |
+| Focal Loss | ❌ | ✅ |
+| Grad-CAM | ❌ | ✅ |
 

@@ -5,3 +5,7 @@ tensorflow
 scikit-learn
 matplotlib
 joblib
+focal-loss
+tf-keras-vis
+pillow
+imbalanced-learn
