@@ -1,0 +1,12 @@
+PROPOSED MODEL - Classification Report
+======================================================================
+
+                precision    recall  f1-score   support
+
+ Biodegradable     0.3330    1.0000    0.4996       299
+    Recyclable     0.0000    0.0000    0.0000       309
+Non-Recyclable     0.0000    0.0000    0.0000       290
+
+      accuracy                         0.3330       898
+     macro avg     0.1110    0.3333    0.1665       898
+  weighted avg     0.1109    0.3330    0.1663       898

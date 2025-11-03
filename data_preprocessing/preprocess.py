@@ -7,7 +7,8 @@ from imblearn.over_sampling import RandomOverSampler
 from collections import Counter
 from utils.category_mapping import map_label
 
-IMG_SIZE = 224
+# Reduced size for memory efficiency
+IMG_SIZE = 128 
 
 def load_data(dataset_path, balance_classes=False):
     images, labels = [], []
@@ -22,42 +23,45 @@ def load_data(dataset_path, balance_classes=False):
             try:
                 img = cv2.imread(img_path)
                 img = cv2.resize(img, (IMG_SIZE, IMG_SIZE))
-                img = img / 255.0
+                img = img.astype('float32') / 255.0   # use float32
                 images.append(img)
                 labels.append(map_label(class_name))
-            except:
+            except Exception as e:
+                print(f"Skipped {img_file}: {e}")
                 continue
 
-    images = np.array(images)
-    labels_array = np.array(labels)
+    images = np.array(images, dtype='float32')
+    labels_array = np.array(labels, dtype='int32')
 
-    # Print class distribution before balancing
     print("Original class distribution:", Counter(labels_array))
 
-    # Balance classes if requested
+    # Balance classes
     if balance_classes:
-        # Reshape for oversampling
         n_samples = images.shape[0]
         images_flat = images.reshape(n_samples, -1)
 
+        # Use float32 for reduced memory footprint
+        images_flat = images_flat.astype('float32')
+
         ros = RandomOverSampler(random_state=42)
-        images_balanced, labels_balanced = ros.fit_resample(images_flat, labels_array)
-
-        # Reshape back to original image shape
-        images = images_balanced.reshape(-1, IMG_SIZE, IMG_SIZE, 3)
-        labels_array = labels_balanced
-
-        print("Balanced class distribution:", Counter(labels_array))
+        try:
+            images_balanced, labels_balanced = ros.fit_resample(images_flat, labels_array)
+            images = images_balanced.reshape(-1, IMG_SIZE, IMG_SIZE, 3)
+            labels_array = labels_balanced
+            print("Balanced class distribution:", Counter(labels_array))
+        except MemoryError:
+            print("⚠️  MemoryError: Dataset too large to balance in RAM.")
+            print("Tip: Use smaller IMG_SIZE or rely on data augmentation instead.")
+            # Fall back to unbalanced dataset
+            pass
 
     labels = to_categorical(labels_array, num_classes=3)
 
-    # Changed test_size to 0.3 for 70-30 split
     return train_test_split(images, labels, test_size=0.3, random_state=42)
 
 if __name__ == "__main__":
     from joblib import dump
 
-    # Load data with balancing option (set to True for proposed model)
     X_train, X_test, y_train, y_test = load_data("dataset/TrashNet", balance_classes=True)
 
     print(f"\nTrain set size: {len(X_train)} samples (70%)")

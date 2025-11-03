@@ -10,31 +10,33 @@ from PIL import Image
 from utils.gradcam import visualize_gradcam, get_last_conv_layer_name
 import matplotlib.pyplot as plt
 
-# Page config
+# ---------------------------------------------------------
+# 🧩 Streamlit Page Configuration
+# ---------------------------------------------------------
 st.set_page_config(
     page_title="Smart Waste Classifier",
     page_icon="♻️",
     layout="wide"
 )
 
-# Title and description
 st.title("♻️ Smart Waste Classifier")
 st.markdown("""
-Upload a waste image to classify it as **Biodegradable**, **Recyclable**, or **Non-Recyclable**.
-This app uses deep learning with explainable AI (Grad-CAM) to show what the model focuses on.
+Upload a waste image to classify it as **Biodegradable**, **Recyclable**, or **Non-Recyclable**.  
+This app uses deep learning with explainable AI (Grad-CAM) to visualize what the model focuses on.
 """)
 
-# Sidebar - Model selection
+# ---------------------------------------------------------
+# ⚙️ Sidebar - Model Selection
+# ---------------------------------------------------------
 st.sidebar.title("⚙️ Settings")
 model_choice = st.sidebar.selectbox(
     "Select Model",
     ["Proposed Model (EfficientNetB0)", "Original Model (MobileNetV2)"]
 )
 
-show_gradcam = st.sidebar.checkbox("Show Grad-CAM Visualization", value=True)
-show_confidence = st.sidebar.checkbox("Show Confidence Scores", value=True)
-
-# Load selected model
+# ---------------------------------------------------------
+# 🧠 Load Selected Model
+# ---------------------------------------------------------
 @st.cache_resource
 def load_selected_model(choice):
     if choice == "Proposed Model (EfficientNetB0)":
@@ -45,14 +47,16 @@ def load_selected_model(choice):
         model_path = "saved_models/best_model.h5"
 
     if os.path.exists(model_path):
-        return load_model(model_path, compile=False), model_path
+        model = load_model(model_path, compile=False)
+        input_shape = model.input_shape[1:3]  # dynamically detect
+        return model, model_path, input_shape
     else:
-        return None, None
+        return None, None, None
 
-model, model_path = load_selected_model(model_choice)
+model, model_path, target_size = load_selected_model(model_choice)
 
 if model is None:
-    st.error(f"⚠️ Model not found. Please train the model first.")
+    st.error("⚠️ Model not found. Please train the model first.")
     st.info("""
     **To train the proposed model:**
     1. `python data_preprocessing/preprocess.py`
@@ -65,32 +69,37 @@ if model is None:
     st.stop()
 
 st.sidebar.success(f"✓ Model loaded: {os.path.basename(model_path)}")
+st.sidebar.info(f"📏 Model input size: {target_size}")
 
-# File uploader
+# ---------------------------------------------------------
+# 📤 Image Upload Section
+# ---------------------------------------------------------
 uploaded_file = st.file_uploader("Choose an image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
-    # Save uploaded file
     temp_path = "temp_upload.jpg"
     with open(temp_path, "wb") as f:
         f.write(uploaded_file.getvalue())
 
-    # Load and preprocess image
+    # -----------------------------------------------------
+    # 🖼️ Preprocess Image
+    # -----------------------------------------------------
     img = cv2.imread(temp_path)
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img_resized = cv2.resize(img_rgb, (224, 224))
+    img_resized = cv2.resize(img_rgb, target_size)  # ✅ dynamic resizing
     img_array = img_resized / 255.0
     img_array = np.expand_dims(img_array, axis=0)
 
-    # Make prediction
+    # -----------------------------------------------------
+    # 🎯 Make Prediction
+    # -----------------------------------------------------
     predictions = model.predict(img_array, verbose=0)
     pred_class = np.argmax(predictions[0])
-    confidence = predictions[0][pred_class]
+    confidence = float(predictions[0][pred_class])
 
     categories = ["Biodegradable", "Recyclable", "Non-Recyclable"]
     predicted_label = categories[pred_class]
 
-    # Create columns for layout
     col1, col2 = st.columns(2)
 
     with col1:
@@ -100,7 +109,6 @@ if uploaded_file is not None:
     with col2:
         st.subheader("🎯 Prediction Results")
 
-        # Display prediction with color coding
         if predicted_label == "Biodegradable":
             st.success(f"### {predicted_label}")
             st.info("♻️ This waste can decompose naturally.")
@@ -111,42 +119,10 @@ if uploaded_file is not None:
             st.warning(f"### {predicted_label}")
             st.info("🗑️ This waste cannot be recycled or composted.")
 
-        # Show confidence scores
-        if show_confidence:
-            st.markdown("---")
-            st.markdown("**Confidence Scores:**")
-            for i, category in enumerate(categories):
-                conf_percent = predictions[0][i] * 100
-                st.progress(predictions[0][i], text=f"{category}: {conf_percent:.2f}%")
 
-    # Grad-CAM visualization
-    if show_gradcam:
-        st.markdown("---")
-        st.subheader("🔍 Grad-CAM Visualization")
-        st.markdown("""
-        Grad-CAM highlights the regions of the image that the model focused on to make its prediction.
-        **Warmer colors (red/yellow)** indicate higher importance.
-        """)
-
-        try:
-            with st.spinner("Generating Grad-CAM heatmap..."):
-                # Auto-detect last conv layer
-                last_conv_layer = get_last_conv_layer_name(model)
-
-                gradcam_img, _, _ = visualize_gradcam(
-                    temp_path,
-                    model,
-                    last_conv_layer_name=last_conv_layer
-                )
-
-            col_left, col_mid, col_right = st.columns([1, 2, 1])
-            with col_mid:
-                st.image(gradcam_img, caption="Grad-CAM Heatmap Overlay", use_column_width=True)
-
-        except Exception as e:
-            st.error(f"Could not generate Grad-CAM visualization: {str(e)}")
-
-    # Additional info
+    # -----------------------------------------------------
+    # 📘 About Section
+    # -----------------------------------------------------
     st.markdown("---")
     with st.expander("ℹ️ About the Model"):
         if "Proposed" in model_choice:
@@ -170,16 +146,18 @@ if uploaded_file is not None:
             - Data: 80-20 train-test split
             """)
 
-    # Clean up temp file
+    # Cleanup temporary image
     if os.path.exists(temp_path):
         os.remove(temp_path)
 
 else:
+    # -----------------------------------------------------
+    # 🧾 Info & Examples
+    # -----------------------------------------------------
     st.info("👆 Please upload an image to get started!")
-
-    # Show example
     st.markdown("---")
     st.markdown("### 📋 Example Categories")
+
     col1, col2, col3 = st.columns(3)
 
     with col1:

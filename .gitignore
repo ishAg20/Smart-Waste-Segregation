@@ -2,3 +2,6 @@
 *.pkl
 *.joblib
 __pycache__/
+TrashNet/
+logs/proposed_model_*/
+venv/
